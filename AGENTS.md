@@ -6,6 +6,10 @@ This repository contains small, reusable utilities for maintaining agent skill
 repositories. Utilities must remain independent of any specific user profile,
 machine, organization, or skill repository.
 
+The optional `skills/update-dknn-skills` adapter may select the public dknn
+repositories. Keep its underlying engine generic; regenerate bundled scripts
+with `scripts/Build-UpdateSkill.ps1` and verify parity with `-Check`.
+
 ## Instruction hierarchy
 
 1. Read this file before making changes.

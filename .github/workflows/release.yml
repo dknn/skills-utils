@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable SemVer tag (vMAJOR.MINOR.PATCH)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    uses: ./.github/workflows/test.yml
+  release:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Publish validated commit
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $Version = $env:RELEASE_VERSION
+          if ($Version -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
+            throw 'Expected a stable SemVer tag such as v1.0.0.'
+          }
+          $Main = gh api "repos/$env:GH_REPO/commits/main" --jq .sha
+          if ($LASTEXITCODE -ne 0 -or $Main -cne $env:GITHUB_SHA) {
+            throw 'Main changed or could not be verified. Dispatch a fresh run on main.'
+          }
+          $Immutable = gh api "repos/$env:GH_REPO/immutable-releases" --jq .enabled
+          if ($LASTEXITCODE -ne 0 -or $Immutable -ne 'true') {
+            throw 'Enable immutable releases before publishing.'
+          }
+          # Creating a ref fails if the tag exists; never reuse or move a tag.
+          gh api --method POST "repos/$env:GH_REPO/git/refs" -f "ref=refs/tags/$Version" -f "sha=$env:GITHUB_SHA"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create a new version tag.' }
+          gh release create $Version --verify-tag --draft --title $Version --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed. Inspect the retained tag before retrying.' }
+          gh release edit $Version --draft=false
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing failed. Inspect the retained draft; do not move its tag.' }

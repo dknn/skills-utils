@@ -6,9 +6,15 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = Split-Path $PSScriptRoot -Parent
 $ActionlintInstaller = Join-Path $PSScriptRoot "Install-Actionlint.ps1"
-$RegressionTest = Join-Path `
-    $RepoRoot `
-    "tests/Test-Copy-AgentSkillToUserProfile.ps1"
+$RegressionTests = @(
+    "Test-Copy-AgentSkillToUserProfile.ps1"
+    "Test-Get-AgentSkillUserProfile.ps1"
+    "Test-Update-AgentSkill.ps1"
+    "Test-SkillVersion.ps1"
+    "Test-UpdateSkillSnapshot.ps1"
+)
+
+& (Join-Path $PSScriptRoot 'Build-UpdateSkill.ps1') -Check
 
 Write-Output "Installing or verifying pinned actionlint..."
 $ActionlintPath = & $ActionlintInstaller
@@ -24,6 +30,7 @@ Write-Output "Parsing PowerShell files..."
 $PowerShellFiles = @(
     Get-ChildItem -LiteralPath (Join-Path $RepoRoot "scripts") -Filter "*.ps1" -File -Recurse
     Get-ChildItem -LiteralPath (Join-Path $RepoRoot "tests") -Filter "*.ps1" -File -Recurse
+    Get-ChildItem -LiteralPath (Join-Path $RepoRoot "skills") -Filter "*.ps1" -File -Recurse
 )
 $ParserFailures = [System.Collections.Generic.List[string]]::new()
 
@@ -48,10 +55,12 @@ if ($ParserFailures.Count -gt 0) {
 }
 
 Write-Output "Running regression tests..."
-& $RegressionTest
-
-if ($LASTEXITCODE -ne 0) {
-    throw "Regression tests failed."
+foreach ($TestName in $RegressionTests) {
+    # Separate processes isolate test mocks and each native exit code.
+    & pwsh -NoProfile -File (Join-Path (Join-Path $RepoRoot "tests") $TestName)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Regression tests failed: $TestName"
+    }
 }
 
 Write-Output "All repository validation checks passed."
