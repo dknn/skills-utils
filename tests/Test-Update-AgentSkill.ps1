@@ -171,10 +171,10 @@ try {
     $LegacySkill = Join-Path $LegacyTarget "skills/root-skill"
     $null = New-Item -ItemType Directory -Path (Split-Path $LegacySkill -Parent) -Force
     Copy-Item -LiteralPath $InstalledRoot -Destination $LegacySkill -Recurse
-    Remove-Item -LiteralPath (Join-Path $LegacySkill ".skills-utils-install.json")
+    Remove-Item -LiteralPath (Join-Path $LegacySkill ".skills-utils-install.json") -Force
     $Rows = @(Invoke-FixtureUpdate @{ TargetRoot = @($LegacyTarget); SkillName = @("root-skill") })
     Assert-True ($Rows[0].Status -eq "Adopted") "adopt matching legacy installation"
-    Remove-Item -LiteralPath (Join-Path $LegacySkill ".skills-utils-install.json")
+    Remove-Item -LiteralPath (Join-Path $LegacySkill ".skills-utils-install.json") -Force
     Set-Content -LiteralPath (Join-Path $LegacySkill "SKILL.md") -Value "legacy modification"
     Assert-UpdateFails @{ TargetRoot = @($LegacyTarget); SkillName = @("root-skill") } "reject differing legacy installation"
 
