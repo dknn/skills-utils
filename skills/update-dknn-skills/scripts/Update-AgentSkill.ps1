@@ -108,11 +108,14 @@ function Get-GitHubData {
     param([string]$Uri)
 
     try {
-        Invoke-RestMethod -Uri $Uri -Headers @{
+        $Data = Invoke-RestMethod -Uri $Uri -Headers @{
             Accept = "application/vnd.github+json"
             "X-GitHub-Api-Version" = "2022-11-28"
             "User-Agent" = "skills-utils"
         } -TimeoutSec 60 -ErrorAction Stop
+        # Invoke-RestMethod emits JSON arrays as one pipeline object. Enumerate
+        # here so repository/release pagination sees items rather than nested arrays.
+        return $Data
     }
     catch {
         throw "GitHub request failed for $Uri. Check connectivity and the public API rate limit, then retry. $($_.Exception.Message)"

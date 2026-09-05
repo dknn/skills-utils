@@ -55,12 +55,13 @@ function Invoke-RestMethod {
         $Names = $Fixture.Repositories
         if ($Fixture.Padding -and $Page -eq 1) { $Names = @(1..100 | ForEach-Object { "other-$_" }) }
         elseif (($Fixture.Padding -and $Page -gt 2) -or (-not $Fixture.Padding -and $Page -gt 1)) { return @() }
-        foreach ($Name in $Names) {
+        $Items = @(foreach ($Name in $Names) {
             [pscustomobject]@{ name = $Name; owner = @{ login = "example-owner" }; default_branch = "feature/default"; archived = $false; disabled = $false }
-        }
+        })
+        Write-Output -NoEnumerate $Items
         return
     }
-    if ($Uri -match '/releases\?') { return [pscustomobject]@{ draft = $false; prerelease = $false; tag_name = 'v1.0.0' } }
+    if ($Uri -match '/releases\?') { Write-Output -NoEnumerate @([pscustomobject]@{ draft = $false; prerelease = $false; tag_name = 'v1.0.0' }); return }
     if ($Uri -match '/repos/example-owner/[^/]+/commits/(feature%2[Ff]default|refs%2[Ff]tags%2[Ff]v1.0.0)$') {
         return [pscustomobject]@{ sha = $Fixture.Commit }
     }
