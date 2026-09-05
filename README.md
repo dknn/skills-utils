@@ -272,8 +272,9 @@ The initial release is `v1.0.0`; do not edit a published tag to fix a release.
 Merge a pull request after both `Validate (windows-latest)` and
 `Validate (ubuntu-latest)` pass. Then run **Actions > Release > Run workflow**
 on `main` with the new version. The workflow validates that exact commit again,
-requires immutable releases, creates a new tag, prepares a draft, and publishes
-it. A failed publication can leave a tag or draft for manual inspection; the
+creates a new tag, prepares a draft, publishes it, and verifies the release
+is immutable. Administrators enable immutability in repository settings; the
+Actions token intentionally has no administration permission. A failed publication can leave a tag or draft for manual inspection; the
 workflow never overwrites an existing tag. Publish a new version for corrections.
 
 Repository rules require PRs, passing checks, an up-to-date branch, and resolved

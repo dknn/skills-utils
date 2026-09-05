@@ -43,10 +43,8 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $Main -cne $env:GITHUB_SHA) {
             throw 'Main changed or could not be verified. Dispatch a fresh run on main.'
           }
-          $Immutable = gh api "repos/$env:GH_REPO/immutable-releases" --jq .enabled
-          if ($LASTEXITCODE -ne 0 -or $Immutable -ne 'true') {
-            throw 'Enable immutable releases before publishing.'
-          }
+          # Repository administrators enable immutability server-side. GITHUB_TOKEN
+          # cannot read that admin setting; verify the public release result below.
           # Creating a ref fails if the tag exists; never reuse or move a tag.
           gh api --method POST "repos/$env:GH_REPO/git/refs" -f "ref=refs/tags/$Version" -f "sha=$env:GITHUB_SHA"
           if ($LASTEXITCODE -ne 0) { throw 'Could not create a new version tag.' }
@@ -54,3 +52,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed. Inspect the retained tag before retrying.' }
           gh release edit $Version --draft=false
           if ($LASTEXITCODE -ne 0) { throw 'Publishing failed. Inspect the retained draft; do not move its tag.' }
+          $Immutable = gh api "repos/$env:GH_REPO/releases/tags/$Version" --jq .immutable
+          if ($LASTEXITCODE -ne 0 -or $Immutable -ne 'true') {
+            throw 'Published release is not verified immutable. Check repository settings immediately.'
+          }
