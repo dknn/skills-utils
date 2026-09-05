@@ -8,6 +8,13 @@ $null = [System.IO.Directory]::CreateDirectory($TestRoot)
 try {
     $Wrapper = Join-Path (Split-Path $PSScriptRoot -Parent) 'skills/update-dknn-skills/scripts/Update-DknnSkill.ps1'
     Copy-Item -LiteralPath $Wrapper -Destination (Join-Path $TestRoot 'Update-DknnSkill.ps1')
+    # Reject explicit empty roots before touching any profile or starting the engine.
+    foreach ($Options in @(@{TargetRoot=@('')}, @{TargetRoot=@($TestRoot); SearchRoot=@('')})) {
+        $Rejected = $false
+        try { & (Join-Path $TestRoot 'Update-DknnSkill.ps1') @Options }
+        catch { $Rejected = $_.FullyQualifiedErrorId -match 'ParameterArgumentValidationError' }
+        if (-not $Rejected) { throw 'Explicit empty roots must fail parameter validation.' }
+    }
     Set-Content -LiteralPath (Join-Path $TestRoot 'Copy-AgentSkillToUserProfile.ps1') -Value "'original helper'"
     Set-Content -LiteralPath (Join-Path $TestRoot 'Get-AgentSkillUserProfile.ps1') -Value "'profile helper'"
     @'
