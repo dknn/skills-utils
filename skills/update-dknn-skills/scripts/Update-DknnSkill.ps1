@@ -6,8 +6,8 @@ param(
     [string]$ExactVersion,
     [switch]$AllowMajorUpgrade,
     [switch]$AllowDowngrade,
-    [Parameter(ParameterSetName = 'Current')][string[]]$TargetRoot,
-    [Parameter(ParameterSetName = 'Current')][string[]]$SearchRoot,
+    [Parameter(ParameterSetName = 'Current')][ValidateNotNullOrEmpty()][string[]]$TargetRoot,
+    [Parameter(ParameterSetName = 'Current')][ValidateNotNullOrEmpty()][string[]]$SearchRoot,
     [Parameter(Mandatory, ParameterSetName = 'Profiles')][string[]]$UserSid,
     [Parameter(Mandatory, ParameterSetName = 'SelectProfiles')][switch]$SelectUser,
     [Parameter(ParameterSetName = 'Profiles')]
