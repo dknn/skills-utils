@@ -13,12 +13,13 @@ $Fixture = @{
 function Assert-True { param([bool]$Value, [string]$Message) if (-not $Value) { throw "Assertion failed: $Message" } }
 function Invoke-RestMethod {
     [CmdletBinding()]param([string]$Uri, [hashtable]$Headers, [int]$TimeoutSec)
-    if ($Uri -match '/users/example/repos\?') { return @{name='skills-demo';owner=@{login='example'};default_branch='main';archived=$false;disabled=$false} }
+    if ($Uri -match '/users/example/repos\?') { Write-Output -NoEnumerate @(@{name='skills-demo';owner=@{login='example'};default_branch='main';archived=$false;disabled=$false}); return }
     if ($Uri -match '/releases\?.*page=(\d+)$') {
         $Page = [int]$Matches[1]; $Fixture.Pages.Add($Page)
-        if ($Fixture.Paged -and $Page -eq 1) { return @(1..100 | ForEach-Object { @{draft=$false;prerelease=$true;tag_name="v9.0.0-rc$_"} }) }
-        if (($Fixture.Paged -and $Page -gt 2) -or (-not $Fixture.Paged -and $Page -gt 1)) { return @() }
-        return @($Fixture.Tags | ForEach-Object { @{draft=$false;prerelease=$false;tag_name=$_} })
+        if ($Fixture.Paged -and $Page -eq 1) { Write-Output -NoEnumerate @(1..100 | ForEach-Object { @{draft=$false;prerelease=$true;tag_name="v9.0.0-rc$_"} }); return }
+        if (($Fixture.Paged -and $Page -gt 2) -or (-not $Fixture.Paged -and $Page -gt 1)) { Write-Output -NoEnumerate @(); return }
+        Write-Output -NoEnumerate @($Fixture.Tags | ForEach-Object { @{draft=$false;prerelease=$false;tag_name=$_} })
+        return
     }
     if ($Uri -match '/commits/main$') { return @{sha=$Fixture.Branch} }
     if ($Uri -match '/commits/refs%2[Ff]tags%2[Ff](v[0-9.]+)$') { return @{sha=$Fixture.Sha[$Matches[1]]} }
