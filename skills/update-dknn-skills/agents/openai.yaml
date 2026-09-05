@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update dknn skills"
+  short_description: "Install and update versioned dknn skills"
+  default_prompt: "Use $update-dknn-skills to check, install, and update my dknn skills."

@@ -81,6 +81,50 @@ description: Test fixture.
     }
 
     Assert-PathExists -LiteralPath $OtherSkillFile
+
+    $PreviewRoot = Join-Path $TestRoot "preview"
+    & $ScriptUnderTest -SourceRoot $SourceRoot -TargetRoot $PreviewRoot -WhatIf
+    if (Test-Path -LiteralPath $PreviewRoot) { throw "WhatIf created a destination." }
+
+    $OverlapRejected = $false
+    try { & $ScriptUnderTest -SourceRoot $SourceRoot -TargetRoot $SourceRoot }
+    catch { $OverlapRejected = $_.Exception.Message -match "must not overlap" }
+    if (-not $OverlapRejected) { throw "Overlapping source and target must be rejected." }
+
+    $OriginalEntryPoint = Get-Content -LiteralPath (Join-Path $SourceRoot "SKILL.md") -Raw
+    Set-Content -LiteralPath (Join-Path $SourceRoot "SKILL.md") -Value "---`ndescription: Missing name.`n---`nname: fake-skill"
+    $InvalidNameRejected = $false
+    try { & $ScriptUnderTest -SourceRoot $SourceRoot -TargetRoot $PreviewRoot }
+    catch { $InvalidNameRejected = $_.Exception.Message -match "valid skill name" }
+    if (-not $InvalidNameRejected) { throw "A name outside frontmatter must not be accepted." }
+    [System.IO.File]::WriteAllText((Join-Path $SourceRoot "SKILL.md"), $OriginalEntryPoint)
+
+    $OutsideRoot = Join-Path $TestRoot "outside"
+    $null = New-Item -ItemType Directory -Path $OutsideRoot
+    $Sentinel = Join-Path $OutsideRoot "sentinel.txt"
+    Set-Content -LiteralPath $Sentinel -Value "untouched"
+    $LinkType = if ($IsWindows) { "Junction" } else { "SymbolicLink" }
+    $SourceLink = Join-Path $SourceRoot "scripts/linked"
+    $null = New-Item -ItemType $LinkType -Path $SourceLink -Target $OutsideRoot
+    try {
+        $LinkRejected = $false
+        try { & $ScriptUnderTest -SourceRoot $SourceRoot -TargetRoot $PreviewRoot }
+        catch { $LinkRejected = $_.Exception.Message -match "links and junctions" }
+        if (-not $LinkRejected) { throw "Linked source directories must be rejected." }
+    }
+    finally { Remove-Item -LiteralPath $SourceLink -Force }
+
+    $TargetLink = Join-Path $InstalledSkillRoot "linked"
+    $null = New-Item -ItemType $LinkType -Path $TargetLink -Target $OutsideRoot
+    try {
+        $LinkRejected = $false
+        try { & $ScriptUnderTest -SourceRoot $SourceRoot -TargetRoot $TargetRoot -RemoveExtraFiles }
+        catch { $LinkRejected = $_.Exception.Message -match "links and junctions" }
+        if (-not $LinkRejected) { throw "Linked destination directories must be rejected before cleanup." }
+        if ((Get-Content -LiteralPath $Sentinel -Raw).Trim() -ne "untouched") { throw "Linked destination was modified." }
+    }
+    finally { Remove-Item -LiteralPath $TargetLink -Force }
+
     Write-Output "All Copy-AgentSkillToUserProfile tests passed."
 }
 finally {
